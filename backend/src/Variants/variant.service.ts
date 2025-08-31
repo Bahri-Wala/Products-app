@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Variant } from './variant.entity';
-import { Product } from 'src/Product/product.entity';
+import { Product } from '../product/product.entity';
 import { CreateVariantDto } from './dto/create-varaint.dto';
 import { UpdateVariantDto } from './dto/update-variant.dto';
 
@@ -10,9 +10,9 @@ import { UpdateVariantDto } from './dto/update-variant.dto';
 export class VariantService {
   constructor(
     @InjectRepository(Variant)
-    private variantRepo: Repository<Variant>,
+    private readonly variantRepo: Repository<Variant>,
     @InjectRepository(Product)
-    private productRepo: Repository<Product>,
+    private readonly productRepo: Repository<Product>,
   ) {}
 
   findAll() {

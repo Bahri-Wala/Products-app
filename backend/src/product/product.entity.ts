@@ -1,4 +1,4 @@
-import { Variant } from 'src/Variants/variant.entity';
+import { Variant } from '../Variants/variant.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
