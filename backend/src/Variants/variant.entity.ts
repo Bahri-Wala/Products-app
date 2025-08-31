@@ -5,6 +5,7 @@ import {
   Column,
   ManyToOne,
   Index,
+  JoinColumn,
 } from 'typeorm';
 
 @Entity('variants')
@@ -15,17 +16,18 @@ export class Variant {
   @Column()
   name: string;
 
-  @ManyToOne(() => Product, (p) => p.variants, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (p) => p.variants, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'product_id' })
   product: Product;
 
   @Index()
   @Column('int')
-  index: number; // 1..M per product
+  index: number;
 
   @Index()
   @Column()
-  skuCode: string; // <product.index>_<variant.index>
-
-  @Column({ nullable: true })
-  createdBy: string;
+  skuCode: string;
 }
