@@ -7,23 +7,17 @@ import {
   Edit2,
   Trash2,
 } from "lucide-react";
-
-interface Variant {
-  index: number;
-  name: string;
-  code: string;
-}
-
-interface Product {
-  index: number;
-  name: string;
-  variants: Variant[];
-}
+import useGetProducts from "./hooks/useGetProducts";
+import { useCreateProduct } from "./hooks/useCreateProduct";
+import { useUpdateProduct } from "./hooks/useUpdateProduct";
+import { useDeleteProduct } from "./hooks/useDeleteProduct";
+import { useCreateVariant } from "../Variant/hooks/useCreateVariant";
+import { useUpdateVariant } from "../Variant/hooks/useUpdateVariant";
+import { useDeleteVariant } from "../Variant/hooks/useDeleteVariant";
 
 interface EditingItem {
   type: "product" | "variant";
-  productIndex: number;
-  variantIndex?: number;
+  id: string;
 }
 
 interface MenuState {
@@ -44,25 +38,13 @@ interface DropdownMenuProps {
 }
 
 const ProductVariantManager: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([
-    {
-      index: 1,
-      name: "Premium T-Shirt",
-      variants: [
-        { index: 1, name: "Small Black", code: "TS-SM-BLK" },
-        { index: 2, name: "Medium White", code: "TS-MD-WHT" },
-        { index: 3, name: "Large Gray", code: "TS-LG-GRY" },
-      ],
-    },
-    {
-      index: 2,
-      name: "Running Shoes",
-      variants: [
-        { index: 1, name: "Size 8 Blue", code: "RS-8-BLU" },
-        { index: 2, name: "Size 9 Red", code: "RS-9-RED" },
-      ],
-    },
-  ]);
+  const { data: products, refetch: refetchProducts } = useGetProducts();
+  const { mutateAsync: createProduct } = useCreateProduct();
+  const { mutateAsync: updateProduct } = useUpdateProduct();
+  const { mutateAsync: removeProduct } = useDeleteProduct();
+  const { mutateAsync: createVariant } = useCreateVariant();
+  const { mutateAsync: updateVariant } = useUpdateVariant();
+  const { mutateAsync: removeVariant } = useDeleteVariant();
 
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(
     new Set()
@@ -96,45 +78,25 @@ const ProductVariantManager: React.FC = () => {
 
   const startEdit = (
     type: "product" | "variant",
-    productIndex: number,
-    variantIndex: number | null = null,
+    id: string,
     currentName: string
   ): void => {
     setEditingItem({
       type,
-      productIndex,
-      variantIndex: variantIndex || undefined,
+      id,
     });
     setEditValue(currentName);
     setOpenMenus({ product: null, variant: null });
   };
 
-  const saveEdit = (): void => {
+  const saveEdit = async (): Promise<void> => {
     if (!editingItem || !editValue.trim()) return;
-
-    setProducts((prev) =>
-      prev.map((product) => {
-        if (product.index === editingItem.productIndex) {
-          if (editingItem.type === "product") {
-            return { ...product, name: editValue.trim() };
-          } else if (
-            editingItem.type === "variant" &&
-            editingItem.variantIndex !== undefined
-          ) {
-            return {
-              ...product,
-              variants: product.variants.map((variant) =>
-                variant.index === editingItem.variantIndex
-                  ? { ...variant, name: editValue.trim() }
-                  : variant
-              ),
-            };
-          }
-        }
-        return product;
-      })
-    );
-
+    if (editingItem.type == "product") {
+      await updateProduct({ id: editingItem.id, name: editValue.trim() });
+    } else {
+      await updateVariant({ id: editingItem.id, name: editValue.trim() });
+    }
+    await refetchProducts();
     setEditingItem(null);
     setEditValue("");
   };
@@ -144,63 +106,26 @@ const ProductVariantManager: React.FC = () => {
     setEditValue("");
   };
 
-  const deleteProduct = (productIndex: number): void => {
-    setProducts((prev) =>
-      prev.filter((product) => product.index !== productIndex)
-    );
+  const deleteProduct = async (productId: string): Promise<void> => {
+    await removeProduct(productId);
+    await refetchProducts();
     setOpenMenus({ product: null, variant: null });
   };
 
-  const deleteVariant = (productIndex: number, variantIndex: number): void => {
-    setProducts((prev) =>
-      prev.map((product) => {
-        if (product.index === productIndex) {
-          return {
-            ...product,
-            variants: product.variants.filter(
-              (variant) => variant.index !== variantIndex
-            ),
-          };
-        }
-        return product;
-      })
-    );
+  const deleteVariant = async (variantId: string): Promise<void> => {
+    await removeVariant(variantId);
+    await refetchProducts();
     setOpenMenus({ product: null, variant: null });
   };
 
-  const addProduct = (): void => {
-    const newIndex = Math.max(...products.map((p) => p.index), 0) + 1;
-    setProducts((prev) => [
-      ...prev,
-      {
-        index: newIndex,
-        name: `New Product ${newIndex}`,
-        variants: [],
-      },
-    ]);
+  const addProduct = async (): Promise<void> => {
+    await createProduct({ name: "new_product" });
+    await refetchProducts();
   };
 
-  const addVariant = (productIndex: number): void => {
-    setProducts((prev) =>
-      prev.map((product) => {
-        if (product.index === productIndex) {
-          const newVariantIndex =
-            Math.max(...product.variants.map((v) => v.index), 0) + 1;
-          return {
-            ...product,
-            variants: [
-              ...product.variants,
-              {
-                index: newVariantIndex,
-                name: `New Variant ${newVariantIndex}`,
-                code: `VAR-${newVariantIndex}`,
-              },
-            ],
-          };
-        }
-        return product;
-      })
-    );
+  const addVariant = async (productId: string): Promise<void> => {
+    await createVariant({ name: "new_variant", product_id: productId });
+    await refetchProducts();
     setOpenMenus({ product: null, variant: null });
   };
 
@@ -239,9 +164,9 @@ const ProductVariantManager: React.FC = () => {
 
         <div className="p-6">
           <div className="space-y-3">
-            {products.map((product) => (
+            {products?.map((product) => (
               <div
-                key={product.index}
+                key={product.id}
                 className="border border-gray-200 rounded-lg bg-gray-50"
               >
                 <div className="flex items-center justify-between p-4 hover:bg-gray-100 transition-colors">
@@ -258,7 +183,7 @@ const ProductVariantManager: React.FC = () => {
                     </button>
 
                     {editingItem?.type === "product" &&
-                    editingItem.productIndex === product.index ? (
+                    editingItem.id === product.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <input
                           type="text"
@@ -290,7 +215,7 @@ const ProductVariantManager: React.FC = () => {
                           {product.name}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          {product.variants.length} variants
+                          {product.variants?.length} variants
                         </p>
                       </div>
                     )}
@@ -310,23 +235,18 @@ const ProductVariantManager: React.FC = () => {
                         {
                           icon: <Plus size={14} />,
                           label: "Add Variant",
-                          action: () => addVariant(product.index),
+                          action: () => addVariant(product.id),
                         },
                         {
                           icon: <Edit2 size={14} />,
                           label: "Edit Product",
                           action: () =>
-                            startEdit(
-                              "product",
-                              product.index,
-                              null,
-                              product.name
-                            ),
+                            startEdit("product", product.id, product.name),
                         },
                         {
                           icon: <Trash2 size={14} />,
                           label: "Delete Product",
-                          action: () => deleteProduct(product.index),
+                          action: () => deleteProduct(product.id),
                         },
                       ]}
                       onSelect={(action) => action()}
@@ -336,20 +256,19 @@ const ProductVariantManager: React.FC = () => {
 
                 {expandedProducts.has(product.index) && (
                   <div className="border-t border-gray-200 bg-white">
-                    {product.variants.length === 0 ? (
+                    {product.variants?.length === 0 ? (
                       <div className="p-4 text-center text-gray-500">
                         No variants yet. Click the menu above to add one.
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-100">
-                        {product.variants.map((variant) => (
+                        {product.variants?.map((variant) => (
                           <div
                             key={variant.index}
                             className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
                           >
                             {editingItem?.type === "variant" &&
-                            editingItem.productIndex === product.index &&
-                            editingItem.variantIndex === variant.index ? (
+                            editingItem.id === variant.id ? (
                               <div className="flex items-center gap-2 flex-1">
                                 <div className="w-6"></div>
                                 <input
@@ -385,7 +304,7 @@ const ProductVariantManager: React.FC = () => {
                                       {variant.name}
                                     </h4>
                                     <p className="text-sm text-gray-500 font-mono">
-                                      {variant.code}
+                                      {variant.skuCode}
                                     </p>
                                   </div>
                                 </div>
@@ -418,19 +337,14 @@ const ProductVariantManager: React.FC = () => {
                                         action: () =>
                                           startEdit(
                                             "variant",
-                                            product.index,
-                                            variant.index,
+                                            variant.id,
                                             variant.name
                                           ),
                                       },
                                       {
                                         icon: <Trash2 size={12} />,
                                         label: "Delete Variant",
-                                        action: () =>
-                                          deleteVariant(
-                                            product.index,
-                                            variant.index
-                                          ),
+                                        action: () => deleteVariant(variant.id),
                                       },
                                     ]}
                                     onSelect={(action) => action()}
@@ -448,7 +362,7 @@ const ProductVariantManager: React.FC = () => {
             ))}
           </div>
 
-          {products.length === 0 && (
+          {products?.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-4">
                 <Plus size={48} className="mx-auto" />
@@ -472,7 +386,6 @@ const ProductVariantManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Click outside to close menus */}
       {(openMenus.product || openMenus.variant) && (
         <div
           className="fixed inset-0 z-40"

@@ -2,13 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { axiosInstance } from "../../api/axios";
 import type { ProductUpdate } from "../../types/product.types";
 
-const updateProduct = async (data: ProductUpdate): Promise<void> => {
+const updateVariant = async (data: ProductUpdate): Promise<void> => {
   const { id, ...name } = data;
-  await axiosInstance.patch(`/products/${data.id}`, name);
+  await axiosInstance.patch(`/variants/${data.id}`, name);
 };
 
-export const useUpdateProduct = () => {
+export const useUpdateVariant = () => {
   return useMutation<void, Error, ProductUpdate>({
-    mutationFn: updateProduct,
+    mutationFn: updateVariant,
   });
 };

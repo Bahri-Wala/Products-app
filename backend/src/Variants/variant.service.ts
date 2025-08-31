@@ -55,7 +55,10 @@ export class VariantService {
     variantsToUpdate.forEach(async (variant) => {
       await this.variantRepo.update(
         { id: variant.id },
-        { index: variant.index - 1 },
+        {
+          index: variant.index - 1,
+          skuCode: `${variant.product.index}_${variant.index - 1}`,
+        },
       );
     });
     return this.variantRepo.delete(id);

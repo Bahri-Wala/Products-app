@@ -11,7 +11,7 @@ export class ProductService {
   ) {}
 
   findAll() {
-    return this.productRepo.find();
+    return this.productRepo.find({ relations: ['variants'] });
   }
 
   async create(product: Partial<Product>) {
