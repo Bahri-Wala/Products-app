@@ -1,0 +1,9 @@
+.mylayout {
+  background: #020024;
+  background: linear-gradient(
+    45deg,
+    rgba(2, 0, 36, 1) 0%,
+    rgba(0, 189, 227, 1) 100%
+  );
+  backdrop-filter: blur(7px);
+}
